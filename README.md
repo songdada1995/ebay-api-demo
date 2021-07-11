@@ -1,2 +1,2 @@
-# ebay-restful-api-demo
+# ebay-api-demo
 eBay restful接口对接demo
