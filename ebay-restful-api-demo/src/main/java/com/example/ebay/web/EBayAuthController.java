@@ -5,6 +5,8 @@ import com.ebay.api.client.auth.oauth2.model.AccessToken;
 import com.ebay.api.client.auth.oauth2.model.Environment;
 import com.ebay.api.client.auth.oauth2.model.OAuthResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -23,6 +25,10 @@ import java.util.Optional;
 @RequestMapping("/ebay")
 public class EBayAuthController {
 
+    @Autowired
+    @Qualifier(value = "ebayEnvironment")
+    private Environment ebayEnvironment;
+
     /**
      * 用户授权地址
      *
@@ -37,7 +43,7 @@ public class EBayAuthController {
         scopeList.add("https://api.ebay.com/oauth/api_scope/sell.finances");
         scopeList.add("https://api.ebay.com/oauth/api_scope/sell.fulfillment");
         scopeList.add("https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly");
-        return oauth2Api.generateUserAuthorizationUrl(Environment.PRODUCTION, scopeList, Optional.ofNullable(state));
+        return oauth2Api.generateUserAuthorizationUrl(ebayEnvironment, scopeList, Optional.ofNullable(state));
     }
 
     /**
@@ -58,7 +64,7 @@ public class EBayAuthController {
         log.info("expiresIn:" + expiresIn);
         log.info("state:" + state);
         OAuth2Api oauth2Api = new OAuth2Api();
-        OAuthResponse oAuthResponse = oauth2Api.exchangeCodeForAccessToken(Environment.PRODUCTION, code);
+        OAuthResponse oAuthResponse = oauth2Api.exchangeCodeForAccessToken(ebayEnvironment, code);
         AccessToken accessToken = oAuthResponse.getAccessToken().get();
         String token = accessToken.getToken();
         log.info("accessToken:" + token);
@@ -86,7 +92,7 @@ public class EBayAuthController {
         scopeList.add("https://api.ebay.com/oauth/api_scope/sell.finances");
         scopeList.add("https://api.ebay.com/oauth/api_scope/sell.fulfillment");
         scopeList.add("https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly");
-        OAuthResponse oAuthResponse = oauth2Api.getAccessToken(Environment.PRODUCTION, refreshToken, scopeList);
+        OAuthResponse oAuthResponse = oauth2Api.getAccessToken(ebayEnvironment, refreshToken, scopeList);
         AccessToken accessToken = oAuthResponse.getAccessToken().get();
         String token = accessToken.getToken();
         log.info("accessToken:" + token);

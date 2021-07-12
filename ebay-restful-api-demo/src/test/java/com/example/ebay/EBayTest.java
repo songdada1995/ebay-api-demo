@@ -6,19 +6,15 @@ import com.ebay.api.client.auth.oauth2.model.AccessToken;
 import com.ebay.api.client.auth.oauth2.model.Environment;
 import com.ebay.api.client.auth.oauth2.model.OAuthResponse;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
+import okhttp3.*;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.util.Assert;
 import org.springframework.util.ResourceUtils;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * @Author songbo
@@ -89,7 +85,7 @@ public class EBayTest {
      * @throws IOException
      */
     public String getToken(String code) throws IOException {
-        log.info("code:" + code);
+        Assert.notNull(code, "code不能为空");
         OAuth2Api oauth2Api = new OAuth2Api();
         OAuthResponse oAuthResponse = oauth2Api.exchangeCodeForAccessToken(Environment.PRODUCTION, code);
         AccessToken accessToken = oAuthResponse.getAccessToken().get();
@@ -108,9 +104,10 @@ public class EBayTest {
      * 若access_token过期，刷新access_token
      *
      * @param refreshToken
+     * @return
      * @throws IOException
      */
-    public void refreshToken(String refreshToken) throws IOException {
+    public String refreshToken(String refreshToken) throws IOException {
         OAuth2Api oauth2Api = new OAuth2Api();
         List<String> scopeList = new ArrayList<>();
         scopeList.add("https://api.ebay.com/oauth/api_scope");
@@ -123,38 +120,124 @@ public class EBayTest {
         log.info("accessToken:" + token);
         Date accessTokenExpiresOn = accessToken.getExpiresOn();
         log.info("accessTokenExpiresOn:" + accessTokenExpiresOn);
+        return token;
     }
 
     /**
-     * 调用eBay api
+     * 获取支付数据
+     * API详情：https://developer.ebay.com/api-docs/sell/finances/resources/payout/methods/getPayout
      *
      * @param accessToken
+     * @param offset
+     * @param limit
+     * @param sort
+     * @param filter
      * @return
      * @throws IOException
      */
-    public Response getPayOuts(String accessToken) throws IOException {
-        OkHttpClient okHttpClient = new OkHttpClient();
+    public Response getPayOuts(String accessToken, int offset, int limit, String sort, String filter) throws IOException {
+        Assert.notNull(accessToken, "accessToken不能为空");
+        // 构建请求参数
+        HashMap<String, String> params = new HashMap<>();
+        params.put("offset", String.valueOf(offset));
+        params.put("limit", String.valueOf(limit));
+        if (StringUtils.isNotBlank(sort)) {
+            params.put("sort", sort);
+        }
+        if (StringUtils.isNotBlank(filter)) {
+            params.put("filter", filter);
+        }
+        // 构建请求头
+        HashMap<String, String> headers = new HashMap<>();
+        headers.put("Authorization", "Bearer " + accessToken);
+
+        HttpUrl.Builder urlBuilder = HttpUrl.parse("https://apiz.ebay.com/sell/finances/v1/payout").newBuilder();
+        if (params != null) {
+            for (String key : params.keySet()) {
+                urlBuilder.setQueryParameter(key, params.get(key));
+            }
+        }
         Request request = new Request.Builder()
-                .url("https://apiz.ebay.com/sell/finances/v1/payout")
+                .url(urlBuilder.build())
+                .headers(headers == null ? new Headers.Builder().build() : Headers.of(headers))
                 .get()
-                .addHeader("Authorization", "Bearer " + accessToken)
-                .header("limit", "10")
-                .header("offset", "0")
-                .header("sort", "-payoutDate")
-                .header("filter", "payoutStatus:{SUCCEEDED}")
                 .build();
-        Response response = okHttpClient.newCall(request).execute();
-        return response;
+        OkHttpClient okHttpClient = new OkHttpClient();
+        return okHttpClient.newCall(request).execute();
     }
 
+    /**
+     * 获取交易数据
+     * API详情：https://developer.ebay.com/api-docs/sell/finances/resources/transaction/methods/getTransactions
+     *
+     * @param accessToken
+     * @param offset
+     * @param limit
+     * @param sort
+     * @param filter
+     * @return
+     * @throws IOException
+     */
+    public Response getTransactions(String accessToken, int offset, int limit, String sort, String filter) throws IOException {
+        Assert.notNull(accessToken, "accessToken不能为空");
+        // 构建请求参数
+        HashMap<String, String> params = new HashMap<>();
+        params.put("offset", String.valueOf(offset));
+        params.put("limit", String.valueOf(limit));
+        if (StringUtils.isNotBlank(sort)) {
+            params.put("sort", sort);
+        }
+        if (StringUtils.isNotBlank(filter)) {
+            params.put("filter", filter);
+        }
+        // 构建请求头
+        HashMap<String, String> headers = new HashMap<>();
+        headers.put("Authorization", "Bearer " + accessToken);
+
+        HttpUrl.Builder urlBuilder = HttpUrl.parse("https://apiz.ebay.com/sell/finances/v1/transaction").newBuilder();
+        if (params != null) {
+            for (String key : params.keySet()) {
+                urlBuilder.setQueryParameter(key, params.get(key));
+            }
+        }
+        Request request = new Request.Builder()
+                .url(urlBuilder.build())
+                .headers(headers == null ? new Headers.Builder().build() : Headers.of(headers))
+                .get()
+                .build();
+        OkHttpClient okHttpClient = new OkHttpClient();
+        return okHttpClient.newCall(request).execute();
+    }
 
     public static void main(String[] args) {
         try {
-            String accessToken = "v^1.1#i^1#I^3#f^0...............wVAAA=";
-            EBayTest eBayTest = new EBayTest();
-            Response response = eBayTest.getPayOuts(accessToken);
-            ResponseBody body = response.body();
-            System.out.println(body.string());
+
+//            String code = "v%5E1.1%23i%5E1%......Ml8xI0VeMjYw";
+//            EBayTest eBayTest = new EBayTest();
+//            String accessToken = eBayTest.getToken(code);
+//            System.out.println(accessToken);
+
+//            String refreshToken = "v^1.1#i^1#p^3#f^......SNFXjI2MA==";
+//            EBayTest eBayTest = new EBayTest();
+//            String accessToken = eBayTest.refreshToken(refreshToken);
+//            System.out.println(accessToken);
+
+//            String accessToken = "v^1.1#i^1#r^0#I^3......VM3DJbvLyb8DIIMFQAA";
+//            EBayTest eBayTest = new EBayTest();
+//            Response response = eBayTest.getPayOuts(accessToken, 0, 20, "-payoutDate", "payoutStatus:{SUCCEEDED}");
+//            String bodyString = response.body().string();
+//            System.out.println(bodyString);
+//            PayoutsResponseEBayBean payoutsResponse = JSONObject.parseObject(bodyString, PayoutsResponseEBayBean.class);
+//            System.out.println(payoutsResponse);
+
+//            String accessToken = "v^1.1#i^1#r^0#I^3#f......7XVM3DJbvLyb8DIIMFQAA";
+//            EBayTest eBayTest = new EBayTest();
+//            Response response = eBayTest.getTransactions(accessToken, 0, 20, "-transactionDate", "transactionType:{SALE}");
+//            String bodyString = response.body().string();
+//            System.out.println(bodyString);
+//            TransactionsResponseEBayBean transactionsResponse = JSONObject.parseObject(bodyString, TransactionsResponseEBayBean.class);
+//            System.out.println(transactionsResponse);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
