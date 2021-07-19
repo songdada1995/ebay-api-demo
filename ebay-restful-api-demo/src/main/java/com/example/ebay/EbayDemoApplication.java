@@ -7,10 +7,6 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-import org.springframework.util.ResourceUtils;
-
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 
 @Slf4j
 @SpringBootApplication
@@ -29,9 +25,9 @@ public class EbayDemoApplication {
     CommandLineRunner init() {
         return (args) -> {
             try {
-                CredentialUtil.load(new FileInputStream(ResourceUtils.getFile("classpath:ebay-config.yaml")));
+                CredentialUtil.load(this.getClass().getResourceAsStream("/ebay-config.yaml"));
                 log.info(">>>>> 加载eBay配置文件完成 <<<<<");
-            } catch (FileNotFoundException e) {
+            } catch (Exception e) {
                 log.error(BasicException.stackTraceToString(e));
             }
         };

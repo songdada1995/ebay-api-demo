@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -22,7 +23,7 @@ import java.util.Optional;
  */
 @Slf4j
 @RestController
-@RequestMapping("/ebay")
+@RequestMapping("/ebay/oauth")
 public class EBayAuthController {
 
     @Autowired
@@ -35,14 +36,12 @@ public class EBayAuthController {
      * @param state 自定义参数，可空
      * @return
      */
-    @GetMapping("/auth/url")
+    @GetMapping("/url")
     public String getAuthUrl(@RequestParam(value = "state", required = false) String state) {
         OAuth2Api oauth2Api = new OAuth2Api();
         List<String> scopeList = new ArrayList<>();
         scopeList.add("https://api.ebay.com/oauth/api_scope");
         scopeList.add("https://api.ebay.com/oauth/api_scope/sell.finances");
-        scopeList.add("https://api.ebay.com/oauth/api_scope/sell.fulfillment");
-        scopeList.add("https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly");
         return oauth2Api.generateUserAuthorizationUrl(ebayEnvironment, scopeList, Optional.ofNullable(state));
     }
 
@@ -56,10 +55,10 @@ public class EBayAuthController {
      * @return
      * @throws IOException
      */
-    @GetMapping("/auth/token")
-    public OAuthResponse getToken(@RequestParam(value = "code") String code,
-                                  @RequestParam(value = "expires_in") int expiresIn,
-                                  @RequestParam(value = "state", required = false) String state) throws IOException {
+    @GetMapping("/token")
+    public ModelAndView getToken(@RequestParam(value = "code") String code,
+                                 @RequestParam(value = "expires_in") int expiresIn,
+                                 @RequestParam(value = "state", required = false) String state) throws IOException {
         log.info("code:" + code);
         log.info("expiresIn:" + expiresIn);
         log.info("state:" + state);
@@ -74,7 +73,11 @@ public class EBayAuthController {
         log.info("refreshToken:" + refreshToken);
         Date refreshTokenExpiresOn = oAuthResponse.getRefreshToken().get().getExpiresOn();
         log.info("refreshTokenExpiresOn:" + refreshTokenExpiresOn);
-        return oAuthResponse;
+
+        // 授权后可跳转到自定义页面
+        ModelAndView modelAndView = new ModelAndView();
+        modelAndView.setViewName("success");
+        return modelAndView;
     }
 
     /**
@@ -84,14 +87,12 @@ public class EBayAuthController {
      * @return
      * @throws IOException
      */
-    @GetMapping("/auth/refresh_token")
+    @GetMapping("/refresh_token")
     public OAuthResponse refreshToken(@RequestParam(value = "refresh_token") String refreshToken) throws IOException {
         OAuth2Api oauth2Api = new OAuth2Api();
         List<String> scopeList = new ArrayList<>();
         scopeList.add("https://api.ebay.com/oauth/api_scope");
         scopeList.add("https://api.ebay.com/oauth/api_scope/sell.finances");
-        scopeList.add("https://api.ebay.com/oauth/api_scope/sell.fulfillment");
-        scopeList.add("https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly");
         OAuthResponse oAuthResponse = oauth2Api.getAccessToken(ebayEnvironment, refreshToken, scopeList);
         AccessToken accessToken = oAuthResponse.getAccessToken().get();
         String token = accessToken.getToken();
